@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Список дел</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+            background: #0a0a0a;
+            color: #ffffff;
+            display: flex;
+            justify-content: center;
+            padding: 80px 24px;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 20%;
+            left: 50%;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(255,255,255,0.03) 0%, transparent 70%);
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+        }
+
+        body::after {
+            content: '';
+            position: fixed;
+            bottom: 0;
+            left: 50%;
+            width: 800px;
+            height: 400px;
+            background: radial-gradient(ellipse, rgba(255,255,255,0.02) 0%, transparent 60%);
+            transform: translate(-50%, 50%);
+            pointer-events: none;
+        }
+
+        .app {
+            width: 100%;
+            max-width: 520px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 48px;
+        }
+
+        .header h1 {
+            font-size: 2.2rem;
+            font-weight: 600;
+            letter-spacing: -0.5px;
+            color: #ffffff;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            font-size: 0.95rem;
+            color: rgba(255,255,255,0.4);
+            font-weight: 400;
+        }
+
+        .glass {
+            background: rgba(255,255,255,0.03);
+            backdrop-filter: blur(40px) saturate(150%);
+            -webkit-backdrop-filter: blur(40px) saturate(150%);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 24px;
+            padding: 24px;
+            margin-bottom: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .glass::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+        }
+
+        .input-row {
+            display: flex;
+            gap: 12px;
+        }
+
+        .input {
+            flex: 1;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 14px;
+            padding: 14px 18px;
+            font-size: 0.95rem;
+            color: #ffffff;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .input::placeholder {
+            color: rgba(255,255,255,0.3);
+        }
+
+        .input:focus {
+            background: rgba(255,255,255,0.06);
+            border-color: rgba(255,255,255,0.15);
+        }
+
+        .btn {
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 14px;
+            padding: 14px 22px;
+            font-size: 0.9rem;
+            color: #ffffff;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+
+        .btn:hover {
+            background: rgba(255,255,255,0.12);
+            transform: translateY(-1px);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn-primary {
+            background: rgba(255,255,255,0.95);
+            color: #0a0a0a;
+            border-color: transparent;
+        }
+
+        .btn-primary:hover {
+            background: #ffffff;
+            box-shadow: 0 8px 30px rgba(255,255,255,0.15);
+        }
+
+        .btn-danger {
+            background: rgba(255,255,255,0.04);
+            color: rgba(255,255,255,0.5);
+        }
+
+        .btn-danger:hover {
+            background: rgba(239,68,68,0.15);
+            color: #ef4444;
+            border-color: rgba(239,68,68,0.3);
+        }
+
+        .btn-sm {
+            padding: 8px 14px;
+            font-size: 0.8rem;
+            border-radius: 10px;
+        }
+
+        .actions {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .search-box {
+            margin-bottom: 20px;
+        }
+
+        .tasks {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .task {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px;
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.04);
+            border-radius: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .task:hover {
+            background: rgba(255,255,255,0.04);
+            border-color: rgba(255,255,255,0.08);
+            transform: translateX(4px);
+        }
+
+        .task-title {
+            font-size: 0.95rem;
+            color: rgba(255,255,255,0.9);
+            font-weight: 400;
+        }
+
+        .task-form {
+            margin: 0;
+            padding: 0;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: rgba(255,255,255,0.3);
+            font-size: 0.9rem;
+        }
+
+        .divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
+            margin: 16px 0;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+
+        .glass::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.02) 0%, transparent 50%);
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <div class="header">
+            <h1>Список дел</h1>
+            <p th:if="${allTodos != null and allTodos.size() > 0}" th:text="${allTodos.size()} + ' задач'">задач</p>
+            <p th:unless="${allTodos != null and allTodos.size() > 0}">нет задач</p>
+        </div>
+
+        <div class="glass">
+            <form th:action="@{/add}" th:object="${newTodo}" method="post" class="input-row">
+                <input type="text" class="input" th:field="*{title}" placeholder="Новая задача">
+                <button class="btn btn-primary" type="submit">Добавить</button>
+            </form>
+        </div>
+
+        <div class="glass search-box">
+            <form th:action="@{/search}" method="post" class="input-row">
+                <input type="text" class="input" name="searchTerm" placeholder="Поиск" th:value="${searchTerm}">
+                <button class="btn" type="submit">Найти</button>
+            </form>
+        </div>
+
+        <div class="actions">
+            <form th:action="@{/removeAll}" method="post">
+                <button class="btn btn-danger btn-sm" type="submit">Очистить список</button>
+            </form>
+        </div>
+
+        <div class="glass">
+            <div class="tasks" th:if="${allTodos != null and allTodos.size() > 0}">
+                <div th:each="item : ${allTodos}" class="task">
+                    <span class="task-title" th:text="${item.title}">Задача</span>
+                    <form th:action="@{/delete/{id}(id=${item.id})}" method="post" class="task-form">
+                        <button type="submit" class="btn btn-danger btn-sm">Удалить</button>
+                    </form>
+                </div>
+            </div>
+            <div class="empty-state" th:unless="${allTodos != null and allTodos.size() > 0}">
+                Список пуст
+            </div>
+        </div>
+    </div>
+</body>
+</html>
