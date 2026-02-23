@@ -17,8 +17,11 @@ public class TodoItem {
     @GeneratedValue
     private Long id;
     private String title;
+    private boolean completed = false;
+    private java.time.LocalDateTime createdAt;
 
     public TodoItem(String title) {
         this.title = title;
+        this.createdAt = java.time.LocalDateTime.now();
     }
 }

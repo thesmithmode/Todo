@@ -1,39 +1,494 @@
 <!DOCTYPE html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Список дел</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            background: linear-gradient(180deg, #e8e8ed 0%, #d1d1d6 100%);
+            min-height: 100vh;
+        }
+
+        body {
+            min-height: 100vh;
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', sans-serif;
+            background: linear-gradient(180deg, #e8e8ed 0%, #d1d1d6 100%);
+            color: #1d1d1f;
+            display: flex;
+            justify-content: center;
+            padding: 40px 16px;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .app {
+            width: 100%;
+            max-width: 420px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            color: #1d1d1f;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.72);
+            backdrop-filter: blur(40px) saturate(200%);
+            -webkit-backdrop-filter: blur(40px) saturate(200%);
+            border-radius: 20px;
+            overflow: hidden;
+            margin-bottom: 12px;
+            box-shadow: 
+                0 0.5px 0 0 rgba(255,255,255,0.5) inset,
+                0 1px 2px 0 rgba(0,0,0,0.1),
+                0 4px 16px 0 rgba(0,0,0,0.08);
+        }
+
+        .glass-card-inner {
+            background: linear-gradient(180deg, rgba(255,255,255,0.5) 0%, transparent 50%);
+            padding: 16px;
+        }
+
+        .input-row {
+            display: flex;
+            gap: 8px;
+        }
+
+        .input {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.04);
+            border: none;
+            border-radius: 12px;
+            padding: 12px 16px;
+            font-size: 1rem;
+            color: #1d1d1f;
+            outline: none;
+            transition: background 0.2s;
+        }
+
+        .input:focus {
+            background: rgba(0, 0, 0, 0.06);
+        }
+
+        .input::placeholder {
+            color: rgba(0, 0, 0, 0.3);
+        }
+
+        .btn {
+            background: #1d1d1f;
+            border: none;
+            border-radius: 12px;
+            padding: 12px 20px;
+            font-size: 0.95rem;
+            color: #fff;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            background: #3a3a3c;
+        }
+
+        .btn:active {
+            transform: scale(0.97);
+        }
+
+        .btn-secondary {
+            background: rgba(0, 0, 0, 0.06);
+            color: #1d1d1f;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-sm {
+            padding: 8px 16px;
+            font-size: 0.85rem;
+        }
+
+        .filters {
+            display: flex;
+            justify-content: center;
+            gap: 4px;
+            padding: 12px 16px;
+            background: rgba(0, 0, 0, 0.02);
+            border-bottom: 0.5px solid rgba(0, 0, 0, 0.08);
+        }
+
+        .filter-btn {
+            background: transparent;
+            border: none;
+            border-radius: 8px;
+            padding: 6px 14px;
+            font-size: 0.9rem;
+            color: rgba(0, 0, 0, 0.5);
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+
+        .filter-btn:hover {
+            color: #1d1d1f;
+            background: rgba(0, 0, 0, 0.04);
+        }
+
+        .filter-btn.active {
+            color: #1d1d1f;
+            background: rgba(0, 0, 0, 0.08);
+        }
+
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 24px;
+            padding: 8px 16px;
+            font-size: 0.85rem;
+            color: rgba(0, 0, 0, 0.4);
+            border-bottom: 0.5px solid rgba(0, 0, 0, 0.08);
+        }
+
+        .stat {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .stat-value {
+            font-weight: 600;
+            color: rgba(0, 0, 0, 0.6);
+        }
+
+        .tasks-list {
+            padding: 8px;
+        }
+
+        .task-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            border-radius: 14px;
+            transition: background 0.15s;
+        }
+
+        .task-item:hover {
+            background: rgba(0, 0, 0, 0.03);
+        }
+
+        .checkbox-wrapper {
+            position: relative;
+            width: 22px;
+            height: 22px;
+            flex-shrink: 0;
+        }
+
+        .checkbox {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+            z-index: 1;
+        }
+
+        .checkbox-visual {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            border: 2px solid rgba(0, 0, 0, 0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .checkbox:checked + .checkbox-visual {
+            background: #1d1d1f;
+            border-color: #1d1d1f;
+        }
+
+        .checkbox:checked + .checkbox-visual::after {
+            content: '';
+            width: 6px;
+            height: 10px;
+            border: solid #fff;
+            border-width: 0 2px 2px 0;
+            transform: rotate(45deg) translate(-1px, -1px);
+        }
+
+        .task-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .task-title {
+            font-size: 1rem;
+            color: #1d1d1f;
+            word-break: break-word;
+        }
+
+        .task-title.completed {
+            color: rgba(0, 0, 0, 0.35);
+            text-decoration: line-through;
+        }
+
+        .task-actions {
+            display: flex;
+            gap: 4px;
+            opacity: 0;
+            transition: opacity 0.15s;
+        }
+
+        .task-item:hover .task-actions {
+            opacity: 1;
+        }
+
+        .action-btn {
+            background: transparent;
+            border: none;
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(0, 0, 0, 0.3);
+            font-size: 1.1rem;
+            transition: all 0.15s;
+        }
+
+        .action-btn:hover {
+            background: rgba(0, 0, 0, 0.06);
+            color: rgba(0, 0, 0, 0.6);
+        }
+
+        .action-btn.delete:hover {
+            color: #ff3b30;
+            background: rgba(255, 59, 48, 0.1);
+        }
+
+        .search-row {
+            padding: 12px 16px;
+            border-bottom: 0.5px solid rgba(0, 0, 0, 0.08);
+        }
+
+        .search-active {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 16px;
+            background: rgba(0, 0, 0, 0.03);
+            border-radius: 10px;
+            font-size: 0.9rem;
+            margin-top: 8px;
+        }
+
+        .search-active a {
+            color: #007aff;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .footer-actions {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px 16px;
+            border-top: 0.5px solid rgba(0, 0, 0, 0.08);
+        }
+
+        .footer-btn {
+            background: transparent;
+            border: none;
+            color: rgba(0, 0, 0, 0.4);
+            font-size: 0.85rem;
+            cursor: pointer;
+            padding: 6px 12px;
+            border-radius: 8px;
+            transition: all 0.15s;
+        }
+
+        .footer-btn:hover {
+            color: #1d1d1f;
+            background: rgba(0, 0, 0, 0.04);
+        }
+
+        .footer-btn.danger:hover {
+            color: #ff3b30;
+            background: rgba(255, 59, 48, 0.08);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: rgba(0, 0, 0, 0.3);
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 12px;
+            opacity: 0.5;
+        }
+
+        .edit-form {
+            display: none;
+        }
+
+        .task-item.editing .task-view {
+            display: none;
+        }
+
+        .task-item.editing .edit-form {
+            display: flex;
+            flex: 1;
+            gap: 8px;
+        }
+
+        .edit-input {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.04);
+            border: none;
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 1rem;
+            color: #1d1d1f;
+            outline: none;
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 20px 12px;
+            }
+
+            .input-row {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+            }
+        }
+    </style>
 </head>
 <body>
-    <div class="container mt-5">
-        <h1 class="text-center">Список дел</h1>
-        <form th:action="@{/add}" th:object="${newTodo}" method="post" class="mb-3">
-            <div class="input-group">
-            <input type="text" class="form-control" th:field="*{title}" placeholder="Введите задачу">
-            <button class="btn btn-primary" type="submit">Добавить</button>
+    <div class="app">
+        <div class="header">
+            <h1>Список дел</h1>
+        </div>
+
+        <div class="glass-card">
+            <div class="glass-card-inner">
+                <form th:action="@{/add}" th:object="${newTodo}" method="post" class="input-row">
+                    <input type="text" class="input" th:field="*{title}" placeholder="Что нужно сделать?" required>
+                    <button class="btn" type="submit">Добавить</button>
+                </form>
             </div>
-        </form>
+        </div>
 
-        <form th:action="@{/removeAll}" method="post" class="text-center mb-4">
-            <button class="btn btn-danger" type="submit">Удалить все задачи</button></button>
-        </form>
-
-        <form th:action="@{/search}" method="post" class="mb-3">
-            <div class="input-group">
-                <input type="text" class="form-controll" name="searchTerm" placeholder="Найди задачи" th:value="${searchTerm}">
-                <button class="btn btn-outline-secondary" type="submit">Найти</button>
+        <div class="glass-card">
+            <div class="search-row">
+                <form th:action="@{/search}" method="post" class="input-row">
+                    <input type="text" class="input" name="searchTerm" placeholder="Поиск..." th:value="${searchTerm}">
+                    <button class="btn btn-secondary btn-sm" type="submit">Найти</button>
+                </form>
+                <div class="search-active" th:if="${searchTerm != null and !searchTerm.isBlank()}">
+                    <span>Результаты: «<span th:text="${searchTerm}"></span>»</span>
+                    <a href="/">Сбросить</a>
+                </div>
             </div>
-        </form>
 
-<ul class="list-group">
-    <li th:each="item : ${allTodos}" class="list-group-item d-flex justify-content-between align-items-center">
-        <span th:text="${item.title}"></span>
-        <form th:action="@{/delete/{id}(id=${item.id})}" method="post">
-            <button type="submit" class="btn btn-danger btn-sm">Удалить</button>
-        </form>
-    </li>
-</ul>
+            <div class="filters" th:if="${searchTerm == null or searchTerm.isBlank()}">
+                <a th:href="@{/(filter='all')}" th:class="${filter == null or filter == 'all'} ? 'filter-btn active' : 'filter-btn'">Все</a>
+                <a th:href="@{/(filter='active')}" th:class="${filter == 'active'} ? 'filter-btn active' : 'filter-btn'">Активные</a>
+                <a th:href="@{/(filter='completed')}" th:class="${filter == 'completed'} ? 'filter-btn active' : 'filter-btn'">Выполненные</a>
+            </div>
+
+            <div class="stats" th:if="${searchTerm == null or searchTerm.isBlank()}">
+                <div class="stat">
+                    <span class="stat-value" th:text="${activeCount}">0</span>
+                    <span>активных</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-value" th:text="${completedCount}">0</span>
+                    <span>выполнено</span>
+                </div>
+            </div>
+
+            <div class="tasks-list" th:if="${allTodos != null and allTodos.size() > 0}">
+                <div th:each="item : ${allTodos}" class="task-item" th:data-id="${item.id}">
+                    <form th:action="@{/toggle/{id}(id=${item.id})}" method="post" style="margin:0">
+                        <div class="checkbox-wrapper">
+                            <input type="checkbox" class="checkbox" th:checked="${item.completed}" onchange="this.form.submit()">
+                            <div class="checkbox-visual"></div>
+                        </div>
+                    </form>
+                    
+                    <div class="task-view task-content">
+                        <span class="task-title" th:class="${item.completed} ? 'task-title completed' : 'task-title'" th:text="${item.title}">Задача</span>
+                    </div>
+                    
+                    <form class="edit-form task-content" th:action="@{/edit/{id}(id=${item.id})}" method="post">
+                        <input type="text" class="edit-input" name="title" th:value="${item.title}">
+                        <button type="submit" class="btn btn-sm">✓</button>
+                    </form>
+                    
+                    <div class="task-actions task-view">
+                        <button class="action-btn edit" onclick="toggleEdit(this)" title="Редактировать">✎</button>
+                        <form th:action="@{/delete/{id}(id=${item.id})}" method="post" style="margin:0;display:contents">
+                            <button type="submit" class="action-btn delete" title="Удалить">×</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="empty-state" th:unless="${allTodos != null and allTodos.size() > 0}">
+                <div class="empty-state-icon">📝</div>
+                <p th:if="${searchTerm != null}">Ничего не найдено</p>
+                <p th:unless="${searchTerm != null}">Список пуст</p>
+            </div>
+
+            <div class="footer-actions" th:if="${completedCount > 0 and (searchTerm == null or searchTerm.isBlank())}">
+                <form th:action="@{/clearCompleted}" method="post" style="margin:0">
+                    <button type="submit" class="footer-btn danger">Очистить выполненные</button>
+                </form>
+            </div>
+        </div>
     </div>
+
+    <script>
+        function toggleEdit(btn) {
+            const taskItem = btn.closest('.task-item');
+            const allItems = document.querySelectorAll('.task-item');
+            allItems.forEach(item => item.classList.remove('editing'));
+            taskItem.classList.add('editing');
+            const input = taskItem.querySelector('.edit-input');
+            input.focus();
+            input.select();
+        }
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                document.querySelectorAll('.task-item.editing').forEach(item => {
+                    item.classList.remove('editing');
+                });
+            }
+        });
+    </script>
 </body>
 </html>
