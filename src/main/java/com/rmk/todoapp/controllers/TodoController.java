@@ -1,9 +1,11 @@
 package com.rmk.todoapp.controllers;
 
+import com.rmk.todoapp.model.TaskFilter;
 import com.rmk.todoapp.model.TodoItem;
 import com.rmk.todoapp.repositories.TodoItemRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Controller;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
@@ -25,22 +27,23 @@ public class TodoController implements CommandLineRunner {
             Model model
     ) {
         List<TodoItem> allTodos;
+        TaskFilter taskFilter = TaskFilter.fromString(filter);
 
         if (search != null && !search.isBlank()) {
             allTodos = todoItemRepository.findByTitleContainingIgnoreCase(search);
             model.addAttribute("searchTerm", search);
-        } else if ("active".equals(filter)) {
+        } else if (taskFilter == TaskFilter.ACTIVE) {
             allTodos = todoItemRepository.findByCompleted(false);
-            model.addAttribute("filter", "active");
-        } else if ("completed".equals(filter)) {
+            model.addAttribute("filter", taskFilter.getValue());
+        } else if (taskFilter == TaskFilter.COMPLETED) {
             allTodos = todoItemRepository.findByCompleted(true);
-            model.addAttribute("filter", "completed");
+            model.addAttribute("filter", taskFilter.getValue());
         } else {
             allTodos = todoItemRepository.findAll();
         }
 
-        long activeCount = todoItemRepository.findByCompleted(false).size();
-        long completedCount = todoItemRepository.findByCompleted(true).size();
+        long activeCount = todoItemRepository.countByCompleted(false);
+        long completedCount = todoItemRepository.countByCompleted(true);
 
         model.addAttribute("allTodos", allTodos);
         model.addAttribute("newTodo", new TodoItem());
@@ -53,6 +56,9 @@ public class TodoController implements CommandLineRunner {
     @PostMapping("/add")
     public String add(@ModelAttribute TodoItem todoItem) {
         if (todoItem.getTitle() == null || todoItem.getTitle().isBlank()) {
+            return "redirect:/";
+        }
+        if (todoItem.getTitle().length() > 255) {
             return "redirect:/";
         }
         todoItemRepository.save(todoItem);
@@ -70,7 +76,7 @@ public class TodoController implements CommandLineRunner {
 
     @PostMapping("/edit/{id}")
     public String edit(@PathVariable("id") Long id, @RequestParam("title") String title) {
-        if (title == null || title.isBlank()) {
+        if (title == null || title.isBlank() || title.length() > 255) {
             return "redirect:/";
         }
         todoItemRepository.findById(id).ifPresent(item -> {
@@ -87,12 +93,14 @@ public class TodoController implements CommandLineRunner {
     }
 
     @PostMapping("/removeAll")
+    @Transactional
     public String removeAll() {
         todoItemRepository.deleteAll();
         return "redirect:/";
     }
 
     @PostMapping("/clearCompleted")
+    @Transactional
     public String clearCompleted() {
         List<TodoItem> completed = todoItemRepository.findByCompleted(true);
         todoItemRepository.deleteAll(completed);
