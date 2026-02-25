@@ -73,8 +73,10 @@ src/
 │   │   ├── model/
 │   │   │   ├── TodoItem.java
 │   │   │   └── TaskFilter.java
-│   │   └── repositories/
-│   │       └── TodoItemRepository.java
+│   │   ├── repositories/
+│   │   │   └── TodoItemRepository.java
+│   │   └── service/
+│   │       └── TodoService.java
 │   └── resources/
 │       ├── application.properties
 │       ├── static/
@@ -88,8 +90,10 @@ src/
         │   └── TaskFilterTest.java
         ├── repository/
         │   └── TodoItemRepositoryTest.java
-        └── controller/
-            └── TodoControllerTest.java
+        ├── controller/
+        │   └── TodoControllerTest.java
+        └── service/
+            └── TodoServiceTest.java
 ```
 
 ## Модель данных
@@ -112,6 +116,11 @@ src/
 | `COMPLETED` | Только выполненные |
 
 ## Технические особенности
+
+### Архитектура
+- **Service Layer** — бизнес-логика вынесена в `TodoService`
+- **Controller** — только обработка HTTP запросов и маршрутизация
+- **Repository** — доступ к данным через Spring Data JPA
 
 ### Валидация
 - `@NotBlank` — название не может быть пустым
@@ -140,9 +149,10 @@ src/
 | `TaskFilterTest` | Unit | 6 | Enum, парсинг |
 | `TodoItemRepositoryTest` | Integration | 9 | CRUD, COUNT |
 | `TodoControllerTest` | WebMvc | 20 | Эндпоинты, валидация |
+| `TodoServiceTest` | Unit | 16 | Бизнес-логика |
 | `TodoappApplicationTests` | Integration | 1 | Контекст Spring |
 
-**Всего: 42 теста**
+**Всего: 58 тестов**
 
 ## UI
 

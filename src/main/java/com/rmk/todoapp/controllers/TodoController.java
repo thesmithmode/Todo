@@ -2,10 +2,9 @@ package com.rmk.todoapp.controllers;
 
 import com.rmk.todoapp.model.TaskFilter;
 import com.rmk.todoapp.model.TodoItem;
-import com.rmk.todoapp.repositories.TodoItemRepository;
+import com.rmk.todoapp.service.TodoService;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Controller;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,10 +13,10 @@ import java.util.List;
 @Controller
 public class TodoController implements CommandLineRunner {
 
-    private final TodoItemRepository todoItemRepository;
+    private final TodoService todoService;
 
-    public TodoController(TodoItemRepository todoItemRepository) {
-        this.todoItemRepository = todoItemRepository;
+    public TodoController(TodoService todoService) {
+        this.todoService = todoService;
     }
 
     @GetMapping
@@ -30,20 +29,17 @@ public class TodoController implements CommandLineRunner {
         TaskFilter taskFilter = TaskFilter.fromString(filter);
 
         if (search != null && !search.isBlank()) {
-            allTodos = todoItemRepository.findByTitleContainingIgnoreCase(search);
+            allTodos = todoService.search(search);
             model.addAttribute("searchTerm", search);
-        } else if (taskFilter == TaskFilter.ACTIVE) {
-            allTodos = todoItemRepository.findByCompleted(false);
-            model.addAttribute("filter", taskFilter.getValue());
-        } else if (taskFilter == TaskFilter.COMPLETED) {
-            allTodos = todoItemRepository.findByCompleted(true);
-            model.addAttribute("filter", taskFilter.getValue());
         } else {
-            allTodos = todoItemRepository.findAll();
+            allTodos = todoService.findByFilter(taskFilter);
+            if (taskFilter != TaskFilter.ALL) {
+                model.addAttribute("filter", taskFilter.getValue());
+            }
         }
 
-        long activeCount = todoItemRepository.countByCompleted(false);
-        long completedCount = todoItemRepository.countByCompleted(true);
+        long activeCount = todoService.countActive();
+        long completedCount = todoService.countCompleted();
 
         model.addAttribute("allTodos", allTodos);
         model.addAttribute("newTodo", new TodoItem());
@@ -61,16 +57,13 @@ public class TodoController implements CommandLineRunner {
         if (todoItem.getTitle().length() > 255) {
             return "redirect:/";
         }
-        todoItemRepository.save(todoItem);
+        todoService.create(todoItem.getTitle());
         return "redirect:/";
     }
 
     @PostMapping("/toggle/{id}")
     public String toggle(@PathVariable("id") Long id) {
-        todoItemRepository.findById(id).ifPresent(item -> {
-            item.setCompleted(!item.isCompleted());
-            todoItemRepository.save(item);
-        });
+        todoService.toggle(id);
         return "redirect:/";
     }
 
@@ -79,31 +72,25 @@ public class TodoController implements CommandLineRunner {
         if (title == null || title.isBlank() || title.length() > 255) {
             return "redirect:/";
         }
-        todoItemRepository.findById(id).ifPresent(item -> {
-            item.setTitle(title);
-            todoItemRepository.save(item);
-        });
+        todoService.updateTitle(id, title);
         return "redirect:/";
     }
 
     @PostMapping("/delete/{id}")
     public String delete(@PathVariable("id") Long id) {
-        todoItemRepository.deleteById(id);
+        todoService.delete(id);
         return "redirect:/";
     }
 
     @PostMapping("/removeAll")
-    @Transactional
     public String removeAll() {
-        todoItemRepository.deleteAll();
+        todoService.deleteAll();
         return "redirect:/";
     }
 
     @PostMapping("/clearCompleted")
-    @Transactional
     public String clearCompleted() {
-        List<TodoItem> completed = todoItemRepository.findByCompleted(true);
-        todoItemRepository.deleteAll(completed);
+        todoService.deleteCompleted();
         return "redirect:/";
     }
 
@@ -114,10 +101,10 @@ public class TodoController implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        if (todoItemRepository.count() == 0) {
-            todoItemRepository.save(new TodoItem("Изучить Spring Boot"));
-            todoItemRepository.save(new TodoItem("Создать REST API"));
-            todoItemRepository.save(new TodoItem("Написать тесты"));
+        if (todoService.count() == 0) {
+            todoService.create("Изучить Spring Boot");
+            todoService.create("Создать REST API");
+            todoService.create("Написать тесты");
         }
     }
 }

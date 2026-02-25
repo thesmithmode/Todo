@@ -1,7 +1,7 @@
 package com.rmk.todoapp.controller;
 
 import com.rmk.todoapp.model.TodoItem;
-import com.rmk.todoapp.repositories.TodoItemRepository;
+import com.rmk.todoapp.service.TodoService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,13 +11,12 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import com.rmk.todoapp.controllers.TodoController;
 
-import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -30,7 +29,7 @@ class TodoControllerTest {
     private MockMvc mockMvc;
 
     @MockitoBean
-    private TodoItemRepository repository;
+    private TodoService todoService;
 
     private TodoItem item1;
     private TodoItem item2;
@@ -41,25 +40,25 @@ class TodoControllerTest {
         item1 = new TodoItem("Активная задача");
         item1.setId(1L);
         item1.setCompleted(false);
-        item1.setCreatedAt(LocalDateTime.now());
+        item1.setCreatedAt(java.time.LocalDateTime.now());
 
         item2 = new TodoItem("Выполненная задача");
         item2.setId(2L);
         item2.setCompleted(true);
-        item2.setCreatedAt(LocalDateTime.now());
+        item2.setCreatedAt(java.time.LocalDateTime.now());
 
         item3 = new TodoItem("Вторая активная");
         item3.setId(3L);
         item3.setCompleted(false);
-        item3.setCreatedAt(LocalDateTime.now());
+        item3.setCreatedAt(java.time.LocalDateTime.now());
     }
 
     @Test
     void testIndexReturnsPage() throws Exception {
         List<TodoItem> items = Arrays.asList(item1, item2, item3);
-        when(repository.findAll()).thenReturn(items);
-        when(repository.countByCompleted(false)).thenReturn(2L);
-        when(repository.countByCompleted(true)).thenReturn(1L);
+        when(todoService.findByFilter(any())).thenReturn(items);
+        when(todoService.countActive()).thenReturn(2L);
+        when(todoService.countCompleted()).thenReturn(1L);
 
         mockMvc.perform(get("/"))
                 .andExpect(status().isOk())
@@ -71,9 +70,9 @@ class TodoControllerTest {
 
     @Test
     void testIndexWithEmptyList() throws Exception {
-        when(repository.findAll()).thenReturn(Collections.emptyList());
-        when(repository.countByCompleted(false)).thenReturn(0L);
-        when(repository.countByCompleted(true)).thenReturn(0L);
+        when(todoService.findByFilter(any())).thenReturn(Collections.emptyList());
+        when(todoService.countActive()).thenReturn(0L);
+        when(todoService.countCompleted()).thenReturn(0L);
 
         mockMvc.perform(get("/"))
                 .andExpect(status().isOk())
@@ -84,14 +83,12 @@ class TodoControllerTest {
 
     @Test
     void testAddTask() throws Exception {
-        when(repository.save(any(TodoItem.class))).thenReturn(item1);
-
         mockMvc.perform(post("/add")
                         .param("title", "Новая задача"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/"));
 
-        verify(repository).save(any(TodoItem.class));
+        verify(todoService).create("Новая задача");
     }
 
     @Test
@@ -101,7 +98,7 @@ class TodoControllerTest {
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/"));
 
-        verify(repository, never()).save(any());
+        verify(todoService, never()).create(anyString());
     }
 
     @Test
@@ -110,7 +107,7 @@ class TodoControllerTest {
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/"));
 
-        verify(repository, never()).save(any());
+        verify(todoService, never()).create(anyString());
     }
 
     @Test
@@ -120,9 +117,7 @@ class TodoControllerTest {
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/"));
 
-        verify(repository, never()).save(argThat(item -> 
-            item.getTitle() == null || item.getTitle().isBlank()
-        ));
+        verify(todoService, never()).create(anyString());
     }
 
     @Test
@@ -133,57 +128,38 @@ class TodoControllerTest {
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/"));
 
-        verify(repository, never()).save(any());
+        verify(todoService, never()).create(anyString());
     }
 
     @Test
     void testAddMaxLengthTitleSaves() throws Exception {
         String maxLengthTitle = "a".repeat(255);
-        when(repository.save(any(TodoItem.class))).thenReturn(item1);
 
         mockMvc.perform(post("/add")
                         .param("title", maxLengthTitle))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/"));
 
-        verify(repository).save(any(TodoItem.class));
+        verify(todoService).create(maxLengthTitle);
     }
 
     @Test
     void testToggleTask() throws Exception {
-        when(repository.findById(1L)).thenReturn(Optional.of(item1));
-
         mockMvc.perform(post("/toggle/1"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/"));
 
-        verify(repository).findById(1L);
-        verify(repository).save(any(TodoItem.class));
-    }
-
-    @Test
-    void testToggleNonExistentTask() throws Exception {
-        when(repository.findById(999L)).thenReturn(Optional.empty());
-
-        mockMvc.perform(post("/toggle/999"))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/"));
-
-        verify(repository).findById(999L);
-        verify(repository, never()).save(any());
+        verify(todoService).toggle(1L);
     }
 
     @Test
     void testEditTask() throws Exception {
-        when(repository.findById(1L)).thenReturn(Optional.of(item1));
-
         mockMvc.perform(post("/edit/1")
                         .param("title", "Обновлённая задача"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/"));
 
-        verify(repository).findById(1L);
-        verify(repository).save(any(TodoItem.class));
+        verify(todoService).updateTitle(1L, "Обновлённая задача");
     }
 
     @Test
@@ -193,7 +169,7 @@ class TodoControllerTest {
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/"));
 
-        verify(repository, never()).save(any());
+        verify(todoService, never()).updateTitle(any(), anyString());
     }
 
     @Test
@@ -204,7 +180,7 @@ class TodoControllerTest {
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/"));
 
-        verify(repository, never()).save(any());
+        verify(todoService, never()).updateTitle(any(), anyString());
     }
 
     @Test
@@ -213,7 +189,7 @@ class TodoControllerTest {
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/"));
 
-        verify(repository).deleteById(1L);
+        verify(todoService).delete(1L);
     }
 
     @Test
@@ -222,27 +198,24 @@ class TodoControllerTest {
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/"));
 
-        verify(repository).deleteAll();
+        verify(todoService).deleteAll();
     }
 
     @Test
     void testClearCompleted() throws Exception {
-        when(repository.findByCompleted(true)).thenReturn(Arrays.asList(item2));
-
         mockMvc.perform(post("/clearCompleted"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/"));
 
-        verify(repository).findByCompleted(true);
-        verify(repository).deleteAll(any(List.class));
+        verify(todoService).deleteCompleted();
     }
 
     @Test
     void testSearchTasks() throws Exception {
         List<TodoItem> searchResults = Arrays.asList(item1);
-        when(repository.findByTitleContainingIgnoreCase("активная")).thenReturn(searchResults);
-        when(repository.countByCompleted(false)).thenReturn(2L);
-        when(repository.countByCompleted(true)).thenReturn(1L);
+        when(todoService.search("активная")).thenReturn(searchResults);
+        when(todoService.countActive()).thenReturn(2L);
+        when(todoService.countCompleted()).thenReturn(1L);
 
         mockMvc.perform(get("/").param("search", "активная"))
                 .andExpect(status().isOk())
@@ -250,38 +223,37 @@ class TodoControllerTest {
                 .andExpect(model().attribute("searchTerm", "активная"))
                 .andExpect(model().attributeExists("allTodos"));
 
-        verify(repository).findByTitleContainingIgnoreCase("активная");
+        verify(todoService).search("активная");
     }
 
     @Test
     void testFilterActive() throws Exception {
         List<TodoItem> activeItems = Arrays.asList(item1, item3);
-        when(repository.findByCompleted(false)).thenReturn(activeItems);
-        when(repository.countByCompleted(false)).thenReturn(2L);
-        when(repository.countByCompleted(true)).thenReturn(1L);
+        when(todoService.findByFilter(any())).thenReturn(activeItems);
+        when(todoService.countActive()).thenReturn(2L);
+        when(todoService.countCompleted()).thenReturn(1L);
 
         mockMvc.perform(get("/").param("filter", "active"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("index"))
                 .andExpect(model().attribute("filter", "active"));
 
-        verify(repository, atLeastOnce()).findByCompleted(false);
-        verify(repository, never()).findAll();
+        verify(todoService).findByFilter(any());
     }
 
     @Test
     void testFilterCompleted() throws Exception {
         List<TodoItem> completedItems = Arrays.asList(item2);
-        when(repository.findByCompleted(true)).thenReturn(completedItems);
-        when(repository.countByCompleted(false)).thenReturn(2L);
-        when(repository.countByCompleted(true)).thenReturn(1L);
+        when(todoService.findByFilter(any())).thenReturn(completedItems);
+        when(todoService.countActive()).thenReturn(2L);
+        when(todoService.countCompleted()).thenReturn(1L);
 
         mockMvc.perform(get("/").param("filter", "completed"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("index"))
                 .andExpect(model().attribute("filter", "completed"));
 
-        verify(repository, atLeastOnce()).findByCompleted(true);
+        verify(todoService).findByFilter(any());
     }
 
     @Test
